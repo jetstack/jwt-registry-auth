@@ -1,0 +1,39 @@
+name: 'Docker Login With Identity Token'
+description: |
+  This action logs into a registry with a Github-issued JWT token as the
+  password.
+
+inputs:
+  registry:
+    description: |
+      Registry host.
+    required: true
+
+  username:
+    description: |
+      Username.
+    required: true
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Install OIDC Client from Core Package
+      shell: bash
+      run: npm install @actions/core@1.6.0 @actions/http-client
+
+    - name: Get ID Token
+      uses: actions/github-script@v6
+      id: idtoken
+      with:
+        script: |
+          const coredemo = require('@actions/core')
+          let id_token = await coredemo.getIDToken()
+          coredemo.setOutput('id_token', id_token)
+
+    - name: Log into registry ${{ inputs.registry }}
+      uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ inputs.username }}
+        password: ${{ steps.idtoken.outputs.id_token }}
